@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 import pandas as pd
-"""
-    [Inserir documentação]
-"""
+from scipy.stats import chisquare, chi2
+from numpy import log10
 
 turno = ['1', '2']
 ano = ['2014', '2018']
+estado = [
+    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
+    "PA", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
+    "ZZ"
+]
 nomeDoVotavel = []
-temp = {
-    '2014' : {'1' : [], '2' : []},
-    '2018' : {'1' : [], '2' : []}
-}
 dirbase = "/opt/eleicoes/"
 codificacao = "ISO-8859-1"
 delimitador = ";"
@@ -27,7 +27,6 @@ for a in ano:
 
         nomeDoVotavel.append("BRANCO")
         nomeDoVotavel.append("NULO")
-        temp[a][t] = nomeDoVotavel.copy()
         for nome in nomeDoVotavel:
             print(f"{nome} ", end = '')
             for fq in frel[nome]:
@@ -36,19 +35,10 @@ for a in ano:
             print("")
 
         print("\n")
-
-estado = [
-    "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT",
-    "PA", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO",
-    "ZZ"
-]
-for a in ano:
-    for t in turno:
         totalDeMunicipios = 0
-        nomeDoVotavel = temp[a][t]
-        df = {}
+        votosExtremos = {}
         for nome in nomeDoVotavel:
-            df[nome] = {"MIN": 1.0e+10, "MAX": -1.0e+10, "QTD_MUNICIPIOS" : 0}
+            votosExtremos[nome] = {"MIN": 1.0e+10, "MAX": -1.0e+10, "QTD_MUNICIPIOS" : 0}
 
         print(f"TABELA MÍNIMO E MÁXIMO DE VOTOS NO TURNO {t} ANO {a}\n")
         for es in estado:
@@ -56,17 +46,37 @@ for a in ano:
             dfAux = pd.read_csv(ap, encoding = codificacao, delimiter = delimitador)
             totalDeMunicipios += len(dfAux["NM_MUNICIPIO"].unique())
             for nome in nomeDoVotavel:
-                votos = dfAux.loc[(dfAux["NM_VOTAVEL"] == nome) & (dfAux["QT_VOTOS"] > 0)]
+                votos = dfAux.loc[dfAux["NM_VOTAVEL"] == nome]
                 if(len(votos) > 0):
-                    df[nome]["QTD_MUNICIPIOS"] += len(votos)
-                    if(nome in df.keys()):
-                        if(votos['QT_VOTOS'].min() < df[nome]["MIN"]):
-                            df[nome]["MIN"] = votos['QT_VOTOS'].min()
+                    votosExtremos[nome]["QTD_MUNICIPIOS"] += len(votos)
+                    votosMin = votos['QT_VOTOS'].min()
+                    votosMax = votos['QT_VOTOS'].max()
+                    if(votosMin < votosExtremos[nome]["MIN"]):
+                        votosExtremos[nome]["MIN"] = votosMin
 
-                        if(votos['QT_VOTOS'].max() > df[nome]["MAX"]):
-                            df[nome]["MAX"] = votos['QT_VOTOS'].max()
+                    if(votosMax > votosExtremos[nome]["MAX"]):
+                        votosExtremos[nome]["MAX"] = votosMax
 
-        for nome in df.keys():
-            print(f"{nome} {df[nome]['MIN']} {df[nome]['MAX']} {(100.0*df[nome]['QTD_MUNICIPIOS']/totalDeMunicipios):4.2f}")
+        for nome in votosExtremos.keys():
+            print(f"{nome} {votosExtremos[nome]['MIN']} {votosExtremos[nome]['MAX']} {(100.0*votosExtremos[nome]['QTD_MUNICIPIOS']/totalDeMunicipios):4.2f}")
+
+        print("\n")
+        print(f"TESTE DE ADERÊNCIA TURNO {t} ANO {a}")
+        lfrel = []
+        leiDeBenford = [100.0*(log10(x + 1) - log10(x)) for x in range(1, 10)]
+        leiDeBenford[7] = leiDeBenford[7] + leiDeBenford[8]
+        leiDeBenford.pop()
+        degreeOfFreendom = len(leiDeBenford) - 1
+        alfa = 0.05
+        chiCritico = chi2.ppf(1 - alfa, degreeOfFreendom)
+        print(f"(chiCritico = {chiCritico:6.4f}, alfa = {alfa})\n")
+        for nome in nomeDoVotavel:
+            lfrel = frel.loc[0:6, nome]
+            lfrel[7] = (frel.loc[7, nome] + frel.loc[8, nome])
+            chi, p  = chisquare(leiDeBenford, lfrel)
+            if(chi < chiCritico):
+                print(f"{nome} Sucesso {chi:6.4f} {p:6.4f}")
+            else:
+                print(f"{nome} Falha {chi:6.4f} {p:6.4f}")
 
         print("")
