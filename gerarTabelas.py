@@ -38,17 +38,18 @@ for a in ano:
         totalDeMunicipios = 0
         votosExtremos = {}
         for nome in nomeDoVotavel:
-            votosExtremos[nome] = {"MIN": 1.0e+10, "MAX": -1.0e+10, "QTD_MUNICIPIOS" : 0}
+            votosExtremos[nome] = {"MIN": 1.0e+10, "MAX": -1.0e+10, "QT_MUNICIPIOS" : 0}
 
         print(f"TABELA MÍNIMO E MÁXIMO DE VOTOS NO TURNO {t} ANO {a}\n")
         for es in estado:
             ap = f"{dirbase}{a}/apuracao-t{t}-{a}-{es}.csv"
             dfAux = pd.read_csv(ap, encoding = codificacao, delimiter = delimitador)
-            totalDeMunicipios += len(dfAux["NM_MUNICIPIO"].unique())
+            totalDeMunicipiosNoEstado = len(dfAux["NM_MUNICIPIO"].unique())
+            totalDeMunicipios += totalDeMunicipiosNoEstado
             for nome in nomeDoVotavel:
-                votos = dfAux.loc[dfAux["NM_VOTAVEL"] == nome]
+                votos = dfAux.loc[(dfAux["NM_VOTAVEL"] == nome) & (dfAux["QT_VOTOS"] > 0)]
                 if(len(votos) > 0):
-                    votosExtremos[nome]["QTD_MUNICIPIOS"] += len(votos)
+                    votosExtremos[nome]["QT_MUNICIPIOS"] += len(votos['NM_MUNICIPIO'].unique())
                     votosMin = votos['QT_VOTOS'].min()
                     votosMax = votos['QT_VOTOS'].max()
                     if(votosMin < votosExtremos[nome]["MIN"]):
@@ -58,9 +59,9 @@ for a in ano:
                         votosExtremos[nome]["MAX"] = votosMax
 
         for nome in votosExtremos.keys():
-            print(f"{nome} {votosExtremos[nome]['MIN']} {votosExtremos[nome]['MAX']} {(100.0*votosExtremos[nome]['QTD_MUNICIPIOS']/totalDeMunicipios):4.2f}")
-
-        print("\n")
+            print(f"{nome} {votosExtremos[nome]['MIN']} {votosExtremos[nome]['MAX']} {(100.0*votosExtremos[nome]['QT_MUNICIPIOS']/totalDeMunicipios):5.2f}")
+        
+        print(f"Total de Municípios: {totalDeMunicipios}\n")
         print(f"TESTE DE ADERÊNCIA TURNO {t} ANO {a}")
         lfrel = []
         leiDeBenford = [100.0*(log10(x + 1) - log10(x)) for x in range(1, 10)]
