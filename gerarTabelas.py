@@ -11,7 +11,7 @@ estado = [
     "ZZ"
 ]
 nomeDoVotavel = []
-dirbase = "/opt/eleicoes/"
+dirbase = "eleicoes/"
 codificacao = "ISO-8859-1"
 delimitador = ";"
 for a in ano:
