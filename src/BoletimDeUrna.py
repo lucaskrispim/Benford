@@ -102,16 +102,55 @@ class BoletimDeUrna:
         erroRelativo = [frequenciaAbsoluta[i]/frequenciaEsperada[i] - 1.0 for i in range(len(frequenciaAbsoluta))]
         return erroRelativo
 
-    def grafico(self, nomeDoVotavel, arquivo, titulo):
-        frequenciaAbsoluta = self.frequenciaAbsoluta(self._boletimDeUrna)
-        fqAbs = frequenciaAbsoluta.copy()
-        fqAbs["LEI DE BENFORD"] = self._leiDeBenford
-        ax = fqAbs.plot.line(x = "DÍGITO", y = nomeDoVotavel[0], xlabel = "DÍGITO", ylabel = "FREQUÊNCIA (%)", title = titulo, rot = 0, linestyle = "-", marker = "o", figsize = (10, 8))
-        for nome in nomeDoVotavel[1:]:
-            fqAbs.plot.line(x = "DÍGITO", y = nome, rot = 0, linestyle = "-", marker = "o", ax = ax)
+    """
+        Gera o arquivo com o gráfico da frequência absoluta juntamente com a 
+        curva da lei de Benford.
 
-        fqAbs.plot.line(x = "DÍGITO", y = "LEI DE BENFORD", rot = 0, linestyle = "-", marker = "o", color = "black", ax = ax)
-        ax.figure.savefig(arquivo)
+        Argumento:
+            frequenciaAbsoluta (list): lista com a frequência absoluta dos
+            dígitos de 1 até 9 na amostra de dados.
+            nomeDoArquivo (str): caminho do arquivo.
+            titulo (str): título do gráfico.
+            cores (list): lista com os códigos hexadecimais das cores usadas
+            no gráfico.
+        Retorno:
+            Nenhum retorno de variável. Gera o arquivo com o gráfico desejado.
+    """
+    def grafico(self, nomeDoVotante, nomeDoArquivo, titulo, cores = ["#009c3b", "#002776"]):
+        frequenciaAbsoluta = self.frequenciaAbsoluta()
+        fqAbs = {
+            nomeDoVotante : list(frequenciaAbsoluta[nomeDoVotante])
+        }
+        fqAbs["PRIMEIRO DIGITO"] = range(1, 10)
+        total = sum(fqAbs[nomeDoVotante])
+        fqAbs["LEI DE BENFORD"] = [total*self._leiDeBenford[i] for i in range(9)]
+        fqAbs = pd.DataFrame(fqAbs)
+
+        ax = fqAbs.plot(
+            x = "PRIMEIRO DIGITO",
+            y = "LEI DE BENFORD",
+            xlabel = "PRIMEIRO DÍGITO",
+            ylabel = "FREQUÊNCIA ABSOLUTA",
+            title = titulo,
+            rot = 0,
+            marker = "o",
+            color = cores[0],
+            figsize = (10, 8),
+            use_index = False
+        )
+
+        fqAbs.plot(
+            x = "PRIMEIRO DIGITO",
+            y = nomeDoVotante,
+            label = nomeDoVotante,
+            rot = 0,
+            color = cores[1],
+            kind = "bar",
+            ax = ax
+        )
+
+        ax.figure.savefig(nomeDoArquivo)
+        ax.close()
 
     def dividirArquivo(self, arquivo, numeroDeLinhas, prefixoDaSaida, codificacao = "ISO-8859-1"):
         try:
