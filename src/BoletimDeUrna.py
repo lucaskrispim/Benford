@@ -1,4 +1,4 @@
-from numpy import log10
+from numpy import fabs, log10
 from scipy import stats
 from csv import QUOTE_ALL
 import pandas as pd
@@ -11,9 +11,7 @@ class BoletimDeUrna:
         if(arquivo is not None):
             self.abrir(arquivo, cabecalho, delimitador, codificacao)
 
-        self._leiDeBenford = [100.0*(log10(d + 1) - log10(d)) for d in range(1, 10)]
-        self._frequenciaEsperada = self._leiDeBenford[0:8]
-        self._frequenciaEsperada[7] += self._leiDeBenford[8]
+        self._leiDeBenford = [(log10(d + 1) - log10(d)) for d in range(1, 10)]
 
     def apurar(self, arquivos, colunas, filtro, agrupamento = ["SG_UF", "NM_VOTAVEL"], cabecalho = True, delimitador = ";", codificacao = "ISO-8859-1"):
         """
@@ -55,14 +53,14 @@ class BoletimDeUrna:
 
     def frequenciaAbsoluta(self):
         """
-        Determina a frequência absoluta dos dígitos de 1 a 9 no primeiro dígito da quantidade
+        Determina a frequência absoluta dos algarismos de 1 a 9 no primeiro dígito da quantidade
         de votos recebido por um candidato em cada município do Brasil.
 
         Args:
             boletimDeUrna (DataFrame): data frame com a apuração dos votos do boletim de urna.
 
         Returns:
-            fqrel (DataFrame): a frequência absoluta dos dígitos de 1 a 9 no primeiro dígito da
+            fqrel (DataFrame): a frequência absoluta dos algarismos de 1 a 9 no primeiro dígito da
             quantidade de votos recebido por um candidato.
         """
         buAux = self._boletimDeUrna.copy()
@@ -79,23 +77,7 @@ class BoletimDeUrna:
         fqabs = pd.DataFrame(frequencia)
         return fqabs
 
-    def frequenciaRelativa(self):
-        """
-        Determina a frequência absoluta dos dígitos de 1 a 9 no primeiro dígito da quantidade
-        de votos recebido por um candidato em cada município do Brasil.
-
-        Returns:
-            feq (DataFrame): a frequência absoluta dos dígitos de 1 a 9 no primeiro dígito da
-            quantidade de votos recebido por um candidato.
-        """
-        fqrel = self.frequenciaAbsoluta()
-        for coluna in fqrel.columns:
-            total = fqrel[coluna].sum()
-            fqrel[coluna] = 100.0*fqrel[coluna]/total
-
-        return fqrel
-
-    def orderDeGrandeza(self):
+    def ordemDeGrandeza(self):
         nomeDoVotavel = self._boletimDeUrna["NM_VOTAVEL"].unique()
         ordemDeGrandeza = {}
         for nome in nomeDoVotavel:
@@ -116,39 +98,19 @@ class BoletimDeUrna:
 
         return(ordemDeGrandeza)
 
-    def testeDeAderencia(self, alfa = 0.05):
-        grauDeLiberdade = len(self._frequenciaEsperada) - 1
-        nivelDeConfianca = 1 - alfa
-        chi2Critico = stats.chi2.ppf(nivelDeConfianca, grauDeLiberdade)
-        frequenciaRelativa = self.frequenciaRelativa()
-        testeDeAderencia = {
-            "chi2Critico" : chi2Critico,
-            "alfa" : alfa,
-            "grauDeLiberdade" : grauDeLiberdade,
-            "NM_VOTAVEL" : {}
-        }
-        for nome in frequenciaRelativa.columns:
-            fqrel = list(frequenciaRelativa[nome])
-            frequenciaObservada = fqrel[0:8]
-            frequenciaObservada[7] += fqrel[8]
-            chi2, p = stats.chisquare(frequenciaObservada, self._frequenciaEsperada)
-            testeDeAderencia["NM_VOTAVEL"][nome] = {
-                "teste" : (chi2 < chi2Critico),
-                "chi2" : chi2,
-                "p" : p
-            }
-
-        return testeDeAderencia
+    def erroRelativo(self, frequenciaAbsoluta, frequenciaEsperada):
+        erroRelativo = [frequenciaAbsoluta[i]/frequenciaEsperada[i] - 1.0 for i in range(len(frequenciaAbsoluta))]
+        return erroRelativo
 
     def grafico(self, nomeDoVotavel, arquivo, titulo):
-        fqrel = self.frequenciaRelativa(self._boletimDeUrna)
-        f = fqrel.copy()
-        f["LEI DE BENFORD"] = self._leiDeBenford
-        ax = f.plot.line(x = "DÍGITO", y = nomeDoVotavel[0], xlabel = "DÍGITO", ylabel = "FREQUÊNCIA (%)", title = titulo, rot = 0, linestyle = "-", marker = "o", figsize = (10, 8))
+        frequenciaAbsoluta = self.frequenciaAbsoluta(self._boletimDeUrna)
+        fqAbs = frequenciaAbsoluta.copy()
+        fqAbs["LEI DE BENFORD"] = self._leiDeBenford
+        ax = fqAbs.plot.line(x = "DÍGITO", y = nomeDoVotavel[0], xlabel = "DÍGITO", ylabel = "FREQUÊNCIA (%)", title = titulo, rot = 0, linestyle = "-", marker = "o", figsize = (10, 8))
         for nome in nomeDoVotavel[1:]:
-            f.plot.line(x = "DÍGITO", y = nome, rot = 0, linestyle = "-", marker = "o", ax = ax)
+            fqAbs.plot.line(x = "DÍGITO", y = nome, rot = 0, linestyle = "-", marker = "o", ax = ax)
 
-        f.plot.line(x = "DÍGITO", y = "LEI DE BENFORD", rot = 0, linestyle = "-", marker = "o", color = "black", ax = ax)
+        fqAbs.plot.line(x = "DÍGITO", y = "LEI DE BENFORD", rot = 0, linestyle = "-", marker = "o", color = "black", ax = ax)
         ax.figure.savefig(arquivo)
 
     def dividirArquivo(self, arquivo, numeroDeLinhas, prefixoDaSaida, codificacao = "ISO-8859-1"):
@@ -188,7 +150,6 @@ class BoletimDeUrna:
             else:
                 self._boletimDeUrna = pd.read_csv(arquivo, encoding = codificacao, delimiter = delimitador, header = None)
 
-            # self._boletimDeUrna["QT_VOTOS"] = self._boletimDeUrna["QT_VOTOS"].astype(int64)
         except:
             print(f"Alguma coisa deu errado ao abrir o arquivo {arquivo}.")
 
@@ -206,7 +167,5 @@ class BoletimDeUrna:
             print(f"Alguma coisa deu errado ao salvar o arquivo {arquivo}.")
 
     def transferirVoto(self, votavelOrigem, votavelDestino, quantidadeDeVotos):
-        municipios = self._boletimDeUrna["NM_MUNICIPIO"].unique()
-        estados = self._boletimDeUrna["SG_UF"].unique()
-        votaveis = self._boletimDeUrna["NM_VOTAVEL"].unique()
-        print(municipios, estados, votaveis)
+        #@todo Implementar
+        return None

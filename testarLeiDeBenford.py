@@ -8,35 +8,147 @@ cabecalho = True
 turno = 1
 ano = 2018
 
-agrupamento = {
-    "Estado" : f"{dirbase}{ano}/apuracao-{turno}t-{ano}-estado.csv",
-    "Município": f"{dirbase}{ano}/apuracao-{turno}t-{ano}-municipio.csv",
-    "Zona": f"{dirbase}{ano}/apuracao-{turno}t-{ano}-zona.csv",
-    "Seção": f"{dirbase}{ano}/apuracao-{turno}t-{ano}-secao.csv",
-}
-
-for agr in agrupamento:
-    print(f"Frequência relativa agrupada por {agr}")
-    boletimDeUrna = BoletimDeUrna(agrupamento[agr], cabecalho)
-    frequenciaRelativa = boletimDeUrna.frequenciaRelativa()
-    for nome in frequenciaRelativa.columns:
-        print(f"{nome}  ", end = "")
-        for fq in frequenciaRelativa[nome]:
-            print(f"{fq:5.2f}  ", end = "")
-
-        print("")
+print(f"FREQUÊNCIA ABSOLUTA AGRUPADA POR ESTADO")
+boletimDeUrna = BoletimDeUrna(f"{dirbase}{ano}/apuracao-{turno}t-{ano}-estado.csv", cabecalho)
+total = len(boletimDeUrna._boletimDeUrna["SG_UF"].unique())
+frequenciaEsperada = [total*boletimDeUrna._leiDeBenford[i] for i in range(9)]
+frequenciaAbsoluta = boletimDeUrna.frequenciaAbsoluta()
+for nome in frequenciaAbsoluta.columns:
+    print(f"{nome}  ", end = "")
+    for fq in frequenciaAbsoluta[nome]:
+        print(f"{fq:5.2f}  ", end = "")
 
     print("")
 
-    orderDeGrandeza = boletimDeUrna.orderDeGrandeza()
-    for odg in orderDeGrandeza:
-        print(f"{odg}  {orderDeGrandeza[odg]['minimo']}  {orderDeGrandeza[odg]['maximo']}  10^{orderDeGrandeza[odg]['ordem']}")
-    
+print("")
+
+for nome in frequenciaAbsoluta.columns:
+    erroRelativo = boletimDeUrna.erroRelativo(frequenciaAbsoluta[nome], frequenciaEsperada)
+    print(f"{nome}  ", end = "")
+    for err in erroRelativo:
+        print(f"{err:5.2f}  ", end = "")
+
     print("")
 
-    testeDeAderencia = boletimDeUrna.testeDeAderencia()
-    print(f"chi2Critico = {testeDeAderencia['chi2Critico']:5.2f}, alfa = {testeDeAderencia['alfa']:5.2f}, grauDeLiberdade = {testeDeAderencia['grauDeLiberdade']}")
-    for nome in testeDeAderencia["NM_VOTAVEL"]:
-        print(f"{nome}  {testeDeAderencia['NM_VOTAVEL'][nome]['teste']}  {testeDeAderencia['NM_VOTAVEL'][nome]['chi2']:5.2f}  {testeDeAderencia['NM_VOTAVEL'][nome]['p']:5.2f}")
-    
+print("")
+
+orderDeGrandeza = boletimDeUrna.ordemDeGrandeza()
+for odg in orderDeGrandeza:
+    print(f"{odg}  {orderDeGrandeza[odg]['minimo']}  {orderDeGrandeza[odg]['maximo']}  10^{orderDeGrandeza[odg]['ordem']}")
+
+print("")
+
+print(f"FREQUÊNCIA ABSOLUTA AGRUPADA POR MUNICÍPIO")
+boletimDeUrna = BoletimDeUrna(f"{dirbase}{ano}/apuracao-{turno}t-{ano}-municipio.csv", cabecalho)
+total = 0
+estados = boletimDeUrna._boletimDeUrna["SG_UF"].unique()
+for estado in estados:
+    est = boletimDeUrna._boletimDeUrna.loc[boletimDeUrna._boletimDeUrna["SG_UF"] == estado]
+    total += len(est["NM_MUNICIPIO"].unique())
+
+frequenciaEsperada = [total*boletimDeUrna._leiDeBenford[i] for i in range(9)]
+frequenciaAbsoluta = boletimDeUrna.frequenciaAbsoluta()
+for nome in frequenciaAbsoluta.columns:
+    print(f"{nome}  ", end = "")
+    for fq in frequenciaAbsoluta[nome]:
+        print(f"{fq}  ", end = "")
+
     print("")
+
+print("")
+
+for nome in frequenciaAbsoluta.columns:
+    erroRelativo = boletimDeUrna.erroRelativo(frequenciaAbsoluta[nome], frequenciaEsperada)
+    print(f"{nome}  ", end = "")
+    for err in erroRelativo:
+        print(f"{err:5.2f}  ", end = "")
+
+    print("")
+
+print("")
+
+orderDeGrandeza = boletimDeUrna.ordemDeGrandeza()
+for odg in orderDeGrandeza:
+    print(f"{odg}  {orderDeGrandeza[odg]['minimo']}  {orderDeGrandeza[odg]['maximo']}  10^{orderDeGrandeza[odg]['ordem']}")
+
+print("")
+
+print(f"FREQUÊNCIA ABSOLUTA AGRUPADA POR ZONA")
+boletimDeUrna = BoletimDeUrna(f"{dirbase}{ano}/apuracao-{turno}t-{ano}-zona.csv", cabecalho)
+total = 0
+estados = boletimDeUrna._boletimDeUrna["SG_UF"].unique()
+for estado in estados:
+    est = boletimDeUrna._boletimDeUrna.loc[boletimDeUrna._boletimDeUrna["SG_UF"] == estado]
+    municipios = est["NM_MUNICIPIO"].unique()
+    for municipio in municipios:
+        zona = est.loc[est["NM_MUNICIPIO"] == municipio]
+        total += len(zona["NR_ZONA"].unique())
+
+frequenciaEsperada = [total*boletimDeUrna._leiDeBenford[i] for i in range(9)]
+frequenciaAbsoluta = boletimDeUrna.frequenciaAbsoluta()
+for nome in frequenciaAbsoluta.columns:
+    print(f"{nome}  ", end = "")
+    for fq in frequenciaAbsoluta[nome]:
+        print(f"{fq}  ", end = "")
+
+    print("")
+
+print("")
+
+for nome in frequenciaAbsoluta.columns:
+    erroRelativo = boletimDeUrna.erroRelativo(frequenciaAbsoluta[nome], frequenciaEsperada)
+    print(f"{nome}  ", end = "")
+    for err in erroRelativo:
+        print(f"{err:5.2f}  ", end = "")
+
+    print("")
+
+print("")
+
+orderDeGrandeza = boletimDeUrna.ordemDeGrandeza()
+for odg in orderDeGrandeza:
+    print(f"{odg}  {orderDeGrandeza[odg]['minimo']}  {orderDeGrandeza[odg]['maximo']}  10^{orderDeGrandeza[odg]['ordem']}")
+
+print("")
+
+print(f"FREQUÊNCIA ABSOLUTA AGRUPADA POR SEÇÃO")
+boletimDeUrna = BoletimDeUrna(f"{dirbase}{ano}/apuracao-{turno}t-{ano}-secao.csv", cabecalho)
+total = 0
+estados = boletimDeUrna._boletimDeUrna["SG_UF"].unique()
+for estado in estados:
+    est = boletimDeUrna._boletimDeUrna.loc[boletimDeUrna._boletimDeUrna["SG_UF"] == estado]
+    municipios = est["NM_MUNICIPIO"].unique()
+    for municipio in municipios:
+        mun = est.loc[est["NM_MUNICIPIO"] == municipio]
+        zonas = mun["NR_ZONA"].unique()
+        for zona in zonas:
+            zon = mun.loc[mun["NR_ZONA"] == zona]
+            secoes = zon["NR_SECAO"].unique()
+            total += len(secoes)
+
+frequenciaEsperada = [total*boletimDeUrna._leiDeBenford[i] for i in range(9)]
+frequenciaAbsoluta = boletimDeUrna.frequenciaAbsoluta()
+for nome in frequenciaAbsoluta.columns:
+    print(f"{nome}  ", end = "")
+    for fq in frequenciaAbsoluta[nome]:
+        print(f"{fq}  ", end = "")
+
+    print("")
+
+print("")
+
+for nome in frequenciaAbsoluta.columns:
+    erroRelativo = boletimDeUrna.erroRelativo(frequenciaAbsoluta[nome], frequenciaEsperada)
+    print(f"{nome}  ", end = "")
+    for err in erroRelativo:
+        print(f"{err:5.2f}  ", end = "")
+
+    print("")
+
+print("")
+
+orderDeGrandeza = boletimDeUrna.ordemDeGrandeza()
+for odg in orderDeGrandeza:
+    print(f"{odg}  {orderDeGrandeza[odg]['minimo']}  {orderDeGrandeza[odg]['maximo']}  10^{orderDeGrandeza[odg]['ordem']}")
+
+print("")
