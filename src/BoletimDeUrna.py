@@ -150,7 +150,6 @@ class BoletimDeUrna:
         )
 
         ax.figure.savefig(nomeDoArquivo)
-        ax.close()
 
     def dividirArquivo(self, arquivo, numeroDeLinhas, prefixoDaSaida, codificacao = "ISO-8859-1"):
         try:
