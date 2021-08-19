@@ -25,7 +25,6 @@ for agrupamento in agrupamentos:
         for fq in frequenciaAbsoluta[nome]:
             print(f"{fq:5.2f}  ", end = "")
 
-
         print("")
 
     print("")
@@ -38,7 +37,7 @@ for agrupamento in agrupamentos:
         for err in erroRelativo:
             print(f"{err:5.2f}  ", end = "")
 
-        boletimDeUrna.grafico(nome, f"{dirbase}{ano}/frequencia-absoluta-{nome}-{turno}t-{ano}-{agrupamento}.png", titulo + f" - {nome}")
+        boletimDeUrna.grafico(nome, f"{dirbase}frequencia-absoluta-{nome}-{turno}t-{ano}-{agrupamento}.png", titulo + f" - {nome}")
         print("")
 
     print("")
