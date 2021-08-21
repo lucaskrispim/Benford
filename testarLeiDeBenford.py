@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 from src.BoletimDeUrna import *
-from csv import QUOTE_ALL
 
 dirbase = "/opt/eleicoes/"
 codificacao = "ISO-8859-1"

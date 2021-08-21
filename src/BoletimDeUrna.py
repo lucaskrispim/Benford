@@ -1,5 +1,4 @@
-from numpy import fabs, log10
-from scipy import stats
+from numpy import log10
 import csv
 import pandas as pd
 
@@ -11,6 +10,18 @@ class BoletimDeUrna:
     _boletimDeUrna = None
 
     def __init__(self, arquivo = None, cabecalho = True, delimitador = ";", codificacao = "ISO-8859-1"):
+        """
+            Inicialização do objeto.
+
+            Argumentos:
+                arquivos (list): caminho dos arquivos de boletim de urnas.
+                cabecalho (bool, optional): informa se o arquivo do boletim de urnas tem
+                um cabeçalho na primeira linha. O padrão é True.
+                delimitador (string): caracter que separa as colunas no arquivo do boletim 
+                de urnas.
+                codificacao (str, optional): codificação dos caracteres no arquivo do boletim
+                de urnas. O padrão é "ISO-8859-1".
+        """
         if(arquivo is not None):
             self.abrir(arquivo, cabecalho, delimitador, codificacao)
             self._delimitador = delimitador
@@ -23,6 +34,29 @@ class BoletimDeUrna:
         """
         Determina a quantidade de votos recebido por cada candidato em cada município
         no arquivo.
+
+        Argumentos:
+            arquivos (list): caminho dos arquivos de boletim de urnas.
+            colunas (dict): dicionário com a posição no arquivo do boletim de urnas
+            das colunas "número do turno" (NR_TURNO), "descrição do cargo/pergunta"
+            (DS_CARGO_PERGUNTA), "nome do município" (NM_MUNICIPIO), "nome do votável"
+            (NM_VOTAVEL), "quantidade de votos" (QT_VOTOS), "número da zona" (NR_ZONA) e 
+            "número da seção" (NR_SECAO).
+            filtro (dict): dicionário com o valor do "número de turno" (NR_TURNO) e da
+            "descrição do cargo/pergunta" (DS_CARGO_PERGUNTA). Se o arquivo do boletim
+            de urnas apenas tiver um número de turno, então o valor de NR_TURNO
+            não precisa ser informado.
+            agrupamento (list): colunas que devem ser agrupadas.
+            cabecalho (bool, optional): informa se o arquivo do boletim de urnas tem
+            um cabeçalho na primeira linha. O padrão é True.
+            delimitador (string): caracter que separa as colunas no arquivo do boletim 
+            de urnas.
+            codificacao (str, optional): codificação dos caracteres no arquivo do boletim
+            de urnas. O padrão é "ISO-8859-1".
+
+        Retorno:
+            self._boletimDeUrna (DataFrame): data frame com a quantidade de votos recebido por cada
+            candidato no arquivo.
         """
         try:
             colunasPadrao = agrupamento.copy()
@@ -38,6 +72,7 @@ class BoletimDeUrna:
                 else:
                     buAux = pd.read_csv(arq, encoding = codificacao, delimiter = delimitador, header = None)
                     buAux = buAux[colunas.values()]
+                    buAux.columns = colunas.keys()
 
                 buAux.columns = [col.replace(" ", "") for col in buAux.columns]
 
@@ -60,13 +95,10 @@ class BoletimDeUrna:
     def frequenciaAbsoluta(self):
         """
         Determina a frequência absoluta dos algarismos de 1 a 9 no primeiro dígito da quantidade
-        de votos recebido por um candidato em cada município do Brasil.
+        de votos recebido por um candidato.
 
-        Args:
-            boletimDeUrna (DataFrame): data frame com a apuração dos votos do boletim de urna.
-
-        Returns:
-            fqrel (DataFrame): a frequência absoluta dos algarismos de 1 a 9 no primeiro dígito da
+        Retorno:
+            fqabs (DataFrame): a frequência absoluta dos algarismos de 1 a 9 no primeiro dígito da
             quantidade de votos recebido por um candidato.
         """
         buAux = self._boletimDeUrna.copy()
@@ -84,6 +116,15 @@ class BoletimDeUrna:
         return fqabs
 
     def ordemDeGrandeza(self):
+        """
+            Determina o mínimo e o máximo da amostra de dados, bem como a ordem de
+            grandeza entre a diferença dos mesmos.
+
+            Retorno:
+                minimo (int): menor valor dos dados.
+                maximo (int): maior valor dos dados.
+                odg (int): ordem de grandeza da diferença entre o máximo e o mínimo.
+        """
         nomeDoVotavel = self._boletimDeUrna["NM_VOTAVEL"].unique()
         ordemDeGrandeza = {}
         for nome in nomeDoVotavel:
@@ -104,25 +145,28 @@ class BoletimDeUrna:
 
         return(ordemDeGrandeza)
 
-    def erroRelativo(self, frequenciaAbsoluta, frequenciaEsperada):
-        erroRelativo = [frequenciaAbsoluta[i]/frequenciaEsperada[i] - 1.0 for i in range(len(frequenciaAbsoluta))]
+    def erroRelativo(self, frequenciaObservada, frequenciaEsperada):
+        """
+            Determina o erro percentual entre o valor da frequência observada e
+            o valor da frequência esperada.
+
+            Retorno:
+            erroRelativo (list) lista com os erros.
+        """
+        erroRelativo = [frequenciaObservada[i]/frequenciaEsperada[i] - 1.0 for i in range(len(frequenciaObservada))]
         return erroRelativo
 
-    """
-        Gera o arquivo com o gráfico da frequência absoluta juntamente com a 
-        curva da lei de Benford.
-
-        Argumento:
-            frequenciaAbsoluta (list): lista com a frequência absoluta dos
-            dígitos de 1 até 9 na amostra de dados.
-            nomeDoArquivo (str): caminho do arquivo.
-            titulo (str): título do gráfico.
-            cores (list): lista com os códigos hexadecimais das cores usadas
-            no gráfico.
-        Retorno:
-            Nenhum retorno de variável. Gera o arquivo com o gráfico desejado.
-    """
     def grafico(self, nomeDoVotante, nomeDoArquivo, titulo, cores = ["#009c3b", "#002776"]):
+        """
+            Gera o arquivo com o gráfico de barras da frequência absoluta
+            juntamente com a curva da lei de Benford.
+
+            Argumento:
+                nomeDoVotante (string): nome do votante que deve ser feito o gráfico.
+                nomeDoArquivo (string): nome do arquivo do gráfico.
+                titulo (string): título do gráfico.
+                cores (list): lista com os códigos das cores usadas no gráfico.
+        """
         frequenciaAbsoluta = self.frequenciaAbsoluta()
         fqAbs = {
             nomeDoVotante : list(frequenciaAbsoluta[nomeDoVotante])
@@ -157,12 +201,22 @@ class BoletimDeUrna:
 
         ax.figure.savefig(nomeDoArquivo)
 
-    def dividirArquivo(self, arquivo, numeroDeLinhas, prefixoDaSaida, codificacao = "ISO-8859-1"):
+    def dividirArquivo(self, arquivo, numeroDeLinhas, sufixoDaSaida, codificacao = "ISO-8859-1"):
+        """
+            Divide o arquivo de boletim de urnas em vários arquivos com, 
+            no máximo, uma quantidade desejada de linhas.
+
+        Argumentos:
+            arquivo (string): nome do arquivo do boletim de urnas.
+            numeroDeLinhas (int): quantidade máxima do número de linhas nos novos arquivos.
+            sufixoDaSaida (string): sufixo adicionado ao nome de cada novo arquivo criado.
+            codificacao (str): codificação do arquivo.
+        """
         try:
             arquivoOriginal = open(arquivo, "r", encoding = codificacao)
             parte = 1
-            print(f"Criando arquivo: {prefixoDaSaida}{parte}.csv")
-            arquivoParte = open(f"{prefixoDaSaida}{parte}.csv", "w", encoding = codificacao)
+            print(f"Criando arquivo: {sufixoDaSaida}{parte}.csv")
+            arquivoParte = open(f"{sufixoDaSaida}{parte}.csv", "w", encoding = codificacao)
             lin = 0
             cab = ""
             for linha in arquivoOriginal:
@@ -173,9 +227,9 @@ class BoletimDeUrna:
                 lin += 1
                 if(lin >= numeroDeLinhas):
                     parte += 1
-                    print(f"Criando arquivo: {prefixoDaSaida}{parte}.csv")
+                    print(f"Criando arquivo: {sufixoDaSaida}{parte}.csv")
                     arquivoParte.close()
-                    arquivoParte = open(f"{prefixoDaSaida}{parte}.csv", "w", encoding = codificacao)
+                    arquivoParte = open(f"{sufixoDaSaida}{parte}.csv", "w", encoding = codificacao)
                     if(self._cabecalho):
                         arquivoParte.write(cab)
                         lin = 1
@@ -188,6 +242,18 @@ class BoletimDeUrna:
             print(f"Alguma coisa deu errado ao dividir o arquivo {arquivo}.")
 
     def abrir(self, arquivo, cabecalho = True, delimitador = ";", codificacao = "ISO-8859-1"):
+        """
+            Abrir o arquivo CSV com os dados apurados.
+
+        Argumentos:
+            arquivo (string): nome do arquivo com os dados apurados.
+            cabecalho (bool): indica se a primeira linha do arquivo deve ser
+            considerada como cabeçalho.
+            delimitador (string): caracter que separa as colunas no arquivo do boletim 
+            de urnas.
+            codificacao (str, optional): codificação dos caracteres no arquivo do boletim
+            de urnas. O padrão é "ISO-8859-1".
+        """
         try:
             if(cabecalho):
                 self._boletimDeUrna = pd.read_csv(arquivo, encoding = codificacao, delimiter = delimitador)
@@ -198,6 +264,18 @@ class BoletimDeUrna:
             print(f"Alguma coisa deu errado ao abrir o arquivo {arquivo}.")
 
     def salvar(self, arquivo, cabecalho = True, delimitador = ";", codificacao = "ISO-8859-1"):
+        """
+            Salvar o arquivo CSV com os dados apurados.
+
+        Argumentos:
+            arquivo (string): nome do arquivo com os dados apurados.
+            cabecalho (bool): indica se a primeira linha do arquivo deve ser
+            considerada como cabeçalho.
+            delimitador (string): caracter que separa as colunas no arquivo do boletim 
+            de urnas.
+            codificacao (str, optional): codificação dos caracteres no arquivo do boletim
+            de urnas. O padrão é "ISO-8859-1".
+        """
         try:
             self._boletimDeUrna.to_csv(
                 arquivo,
@@ -210,16 +288,33 @@ class BoletimDeUrna:
         except:
             print(f"Alguma coisa deu errado ao salvar o arquivo {arquivo}.")
 
-    def transferirVoto(self, arquivo, NomeNovoArquivo, removerVoto, adicionarVoto, porcentagem, quantidadeDeVotos, quantidadeDeVotaveisNoPleito, ordemAlfabeticaDoVotavelParaAdicionar, local = {}):
+    def transferirVoto(self, arquivo, nomeNovoArquivo, removerVoto, adicionarVoto, porcentagem, quantidadeDeVotos, quantidadeDeVotaveisNoPleito, ordemAlfabeticaDoVotavelParaAdicionar, local = {}):
+        """
+            Transfere votos de um grupo de votantes para um outro votante.
+
+        Argumentos:
+            arquivo (string): nome do arquivo com os dados apurados.
+            nomeNovoArquivo ([type]): nome do novo arquivo com os dados.
+            removerVoto (list): lista de votáveis para retirar votos.
+            adicionarVoto (string): votavel para adicionar os votos.
+            porcentagem (float): porcentagem de votos que devem ser retirados.
+            quantidadeDeVotos (int): quantidade de votos que deve ser transferida.
+            quantidadeDeVotaveisNoPleito (int): quantidade de votaveis no arquivo
+            de dados.
+            ordemAlfabeticaDoVotavelParaAdicionar (int): posição do votável que
+            receberá os votos na lista de votáveis em ordem alfabética.
+            local (dict): dicionário formado com as chaves sendo a sigla do
+            estado desejado e com os valores sendo uma lista de municípios
+            do respectivo estado. Se a lista de municípios for vazia, então
+            serão considerados todos os municípios do estado.
+        """
         SG_UF = 0
         NM_MUNICIPIO = 1
         NM_VOTAVEL = 2
         QT_VOTOS = 3
         estados = local.keys()
-        arquivoApuracaoReal = arquivo
-        arquivoApuracaoSimulada = NomeNovoArquivo
-        apuracaoReal = open(arquivoApuracaoReal, encoding = self._codificacao)
-        apuracaoSimulada = open(arquivoApuracaoSimulada, "w", encoding = self._codificacao)
+        apuracaoReal = open(arquivo, encoding = self._codificacao)
+        apuracaoSimulada = open(nomeNovoArquivo, "w", encoding = self._codificacao)
         dfApuracaoReal = csv.reader(apuracaoReal, delimiter = self._delimitador)
         dfApuracaoSimulada = csv.writer(apuracaoSimulada, delimiter = self._delimitador, quoting=csv.QUOTE_ALL)
         indices = []
@@ -266,7 +361,6 @@ class BoletimDeUrna:
                     retirar = {}
                     for i in removerVotoId:
                         vt = int(novoArquivo[i][QT_VOTOS])
-                        # r = round(vt*quantidadeDeVotosParaRedistribuir/universoDeVotosParaRemover)
                         r = round(porcentagem*vt)
                         retirar[i] = r
                         retirados += r
@@ -291,4 +385,4 @@ class BoletimDeUrna:
         for linha in novoArquivo:
             dfApuracaoSimulada.writerow(linha)
         
-        self.abrir(arquivoApuracaoSimulada, self._cabecalho, self._delimitador, self._codificacao)
+        self.abrir(nomeNovoArquivo, self._cabecalho, self._delimitador, self._codificacao)

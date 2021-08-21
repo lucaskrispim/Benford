@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 from src.BoletimDeUrna import *
-from csv import QUOTE_ALL
 
 dirbase = "/opt/eleicoes/"
 codificacao = "ISO-8859-1"
@@ -41,6 +40,5 @@ boletimDeUrna.transferirVoto(agrupamentoMunicipio, novoAgrupamentoMunicipio, rem
 for votavel in votaveis:
     votos = boletimDeUrna._boletimDeUrna.loc[(boletimDeUrna._boletimDeUrna["SG_UF"].isin(local.keys())) & (boletimDeUrna._boletimDeUrna["NM_VOTAVEL"] == votavel)]
     apuracao[votavel]["DEPOIS"] = votos['QT_VOTOS'].sum()
-
-for votavel in votaveis:
     print(f"{votavel}    {apuracao[votavel]['ANTES']}    {apuracao[votavel]['DEPOIS']}    {apuracao[votavel]['DEPOIS'] - apuracao[votavel]['ANTES']}")
+
